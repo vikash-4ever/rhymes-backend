@@ -128,3 +128,7 @@ def get_albums(db: Session = Depends(get_db)):
         "count": len(albums),
         "results": [album[0] for album in albums]
     }
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
