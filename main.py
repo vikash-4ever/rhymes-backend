@@ -22,6 +22,10 @@ def get_db():
 def home():
     return {"message": "Rhymes API Running 🎵"}
 
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
+    return {"status": "ok"}
+
 @app.get("/songs", response_model=list[SongResponse])
 def get_songs(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
     return db.query(Song).offset(skip).limit(limit).all()
@@ -128,7 +132,3 @@ def get_albums(db: Session = Depends(get_db)):
         "count": len(albums),
         "results": [album[0] for album in albums]
     }
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
