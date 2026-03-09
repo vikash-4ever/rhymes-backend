@@ -114,7 +114,13 @@ def get_artists(db: Session = Depends(get_db)):
     return {
         "success": True,
         "count": len(artists),
-        "results": [artist.name for artist in artists]
+        "results": [
+            {
+                "id": artist.id,
+                "name": artist.name
+            }
+            for artist in artists
+        ]
     }
 
 @app.get("/albums")
