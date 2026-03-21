@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from database import SessionLocal, engine
@@ -38,6 +38,14 @@ def get_song(song_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Song not found")
 
     return song
+
+@app.post("/songs/by-ids", response_model=List[SongResponse])
+def get_songs_by_ids(
+    ids: List[str] = Body(...),
+    db: Session = Depends(get_db)
+):
+    songs = db.query(Song).filter(Song.id.in_(ids)).all()
+    return songs
 
 @app.get("/search", response_model=list[SongResponse])
 def search_songs(q: str, db: Session = Depends(get_db)):
