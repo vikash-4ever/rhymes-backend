@@ -9,7 +9,7 @@ Base.metadata.create_all(bind=engine)
 db = SessionLocal()
 
 # Load JSON
-with open("songs_with_urls.json", "r", encoding="utf-8") as f:
+with open("final_songs.json", "r", encoding="utf-8") as f:
     songs_data = json.load(f)
 
 for item in songs_data:
