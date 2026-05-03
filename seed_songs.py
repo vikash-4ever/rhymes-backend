@@ -37,6 +37,8 @@ for item in songs_data:
         ) if item.get("createdAt") else datetime.utcnow()
     )
 
+    db.add(song)
+
     # Normalize Artists
     artist_names = item["artist"].split(",")
 
@@ -51,12 +53,8 @@ for item in songs_data:
                 name=clean_name
             )
             db.add(artist)
-            db.flush()  # important so artist gets ID
-
         song.artists.append(artist)
-
-    db.add(song)
-
+    db.flush()  # important so artist gets ID
 db.commit()
 db.close()
 

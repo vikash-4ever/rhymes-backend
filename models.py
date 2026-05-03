@@ -9,8 +9,8 @@ import uuid
 song_artists = Table(
     "song_artists",
     Base.metadata,
-    Column("song_id", String, ForeignKey("songs.id"), primary_key=True),
-    Column("artist_id", String, ForeignKey("artists.id"), primary_key=True),
+    Column("song_id", String, ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True),
+    Column("artist_id", String, ForeignKey("artists.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
