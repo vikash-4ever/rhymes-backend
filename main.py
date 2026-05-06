@@ -5,6 +5,8 @@ from database import SessionLocal, engine
 from models import Base, Song, Artist
 from schemas import SongResponse
 from typing import List
+from bs4 import BeautifulSoup
+import requests
 
 Base.metadata.create_all(bind=engine)
 
@@ -146,3 +148,32 @@ def get_albums(db: Session = Depends(get_db)):
         "count": len(albums),
         "results": [album[0] for album in albums]
     }
+
+@app.get("/artist-image/{artist_name}")
+def get_artist_image(artist_name: str):
+    try:
+        url = f"https://www.last.fm/music/{artist_name.replace(' ', '+')}/+images"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            return {"image_url": None}
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        img = soup.find("img")
+
+        if not img:
+            return {"image_url": None}
+
+        image_url = img.get("src")
+
+        return {"image_url": image_url}
+
+    except Exception as e:
+        print("Artist image scrape error:", e)
+        return {"image_url": None}
