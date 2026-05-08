@@ -5,7 +5,6 @@ from database import SessionLocal, engine
 from models import Base, Song, Artist
 from schemas import SongResponse
 from typing import List
-from bs4 import BeautifulSoup
 import requests
 
 Base.metadata.create_all(bind=engine)
@@ -152,145 +151,53 @@ def get_albums(db: Session = Depends(get_db)):
 @app.get("/artist-image/{artist_name}")
 def get_artist_image(artist_name: str):
 
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    DEFAULT_IMAGE = (
+        "https://global.honda/en/RandD/assets/img/member/member_ninomiya.jpg"
+    )
 
     try:
 
-        # -----------------------------
-        # normalize variations
-        # -----------------------------
-        variations = list(set([
-            artist_name,
-
-            artist_name.replace("-", "–"),
-            artist_name.replace("–", "-"),
-            artist_name.replace("—", "-"),
-
-            artist_name.replace("&", "and"),
-            artist_name.replace("and", "&"),
-
-            artist_name.replace(".", ""),
-        ]))
-
-        # -----------------------------
-        # helper
-        # -----------------------------
-        def extract_image(page_url: str):
-
-            response = requests.get(page_url, headers=headers)
-
-            if response.status_code != 200:
-                return None
-
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # find ALL image tags
-            images = soup.find_all("img")
-
-            for img in images:
-
-                src = (
-                    img.get("src")
-                    or img.get("data-src")
-                    or img.get("data-original")
-                )
-
-                if not src:
-                    continue
-
-                # ignore placeholder image
-                if "2a96cbd8b46e442fc41c2b86b821562f" in src:
-                    continue
-
-                # valid lastfm image
-                if "lastfm.freetls.fastly.net" in src:
-
-                    # upgrade quality
-                    src = (
-                        src
-                        .replace("avatar170s", "770x0")
-                        .replace("300x300", "770x0")
-                    )
-
-                    return src
-
-            return None
-
-        # -----------------------------
-        # direct attempts
-        # -----------------------------
-        for name in variations:
-
-            print("Trying direct:", name)
-
-            url = (
-                f"https://www.last.fm/music/"
-                f"{name.replace(' ', '+')}/+images"
-            )
-
-            image_url = extract_image(url)
-
-            if image_url:
-
-                return {
-                    "artist_used": name,
-                    "image_url": image_url
-                }
-
-        # -----------------------------
-        # fallback search
-        # -----------------------------
-        print("Trying search:", artist_name)
-
-        search_url = (
-            f"https://www.last.fm/search/artists?q="
-            f"{artist_name.replace(' ', '+')}"
+        url = (
+            f"https://api.deezer.com/search/artist?q="
+            f"{artist_name}"
         )
 
-        search_response = requests.get(search_url, headers=headers)
+        response = requests.get(url, timeout=10)
 
-        if search_response.status_code != 200:
-            return {"image_url": None}
+        data = response.json()
 
-        search_soup = BeautifulSoup(search_response.text, "html.parser")
+        artists = data.get("data", [])
 
-        artist_href = None
-
-        for a in search_soup.find_all("a", href=True):
-
-            href = a.get("href")
-
-            if href and href.startswith("/music/"):
-
-                # ignore unrelated links
-                if "/+wiki" in href:
-                    continue
-
-                artist_href = href
-                break
-
-        if not artist_href:
-            return {"image_url": None}
-
-        print("Matched href:", artist_href)
-
-        artist_page = f"https://www.last.fm{artist_href}/+images"
-
-        print("Matched artist page:", artist_page)
-
-        image_url = extract_image(artist_page)
-
-        if image_url:
-
+        if not artists:
             return {
-                "artist_used": artist_href.split("/")[-1],
-                "image_url": image_url
+                "image_url": DEFAULT_IMAGE
             }
 
-        return {"image_url": None}
+        selected_artist = None
+
+        for artist in artists:
+
+            if artist["name"].lower() == artist_name.lower():
+                selected_artist = artist
+                break
+
+        if not selected_artist:
+            selected_artist = artists[0]
+
+        return {
+            "artist_used": selected_artist["name"],
+            "image_url": (
+                selected_artist.get("picture_xl")
+                or selected_artist.get("picture_big")
+                or selected_artist.get("picture_medium")
+                or DEFAULT_IMAGE
+            )
+        }
 
     except Exception as e:
-        print("Artist image scrape error:", e)
-        return {"image_url": None}
+
+        print("Deezer artist image error:", e)
+
+        return {
+            "image_url": DEFAULT_IMAGE
+        }
