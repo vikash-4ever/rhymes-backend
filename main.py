@@ -11,6 +11,93 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+CATEGORY_RULES = {
+
+    "Romantic": [
+        "love",
+        "ishq",
+        "dil",
+        "jaan",
+        "pyar",
+        "pyaar",
+        "sanam",
+        "tere",
+        "teri",
+        "tum"
+    ],
+
+    "Sad Songs": [
+        "dooriyan",
+        "zakhm",
+        "mushkil",
+        "khalipan",
+        "without you"
+    ],
+
+    "Bollywood": [
+        "arijit",
+        "shreya",
+        "pritam",
+        "mithoon",
+        "rahman",
+        "jubin",
+        "sonu"
+    ],
+
+    "Sufi": [
+        "nusrat",
+        "rahat",
+        "ali",
+        "khuda",
+        "suroor"
+    ],
+
+    "Dance": [
+        "badshah",
+        "touch",
+        "zara",
+        "dance"
+    ],
+
+    "Lofi": [
+        "slowed",
+        "reverb",
+        "lofi"
+    ],
+
+    "Arijit Singh": [
+        "arijit"
+    ],
+
+    "Atif Aslam": [
+        "atif"
+    ],
+
+    "Shreya Ghoshal": [
+        "shreya"
+    ],
+
+    "Mohit Chauhan": [
+        "mohit"
+    ],
+
+    "Jubin Nautiyal": [
+        "jubin"
+    ],
+
+    "Sonu Nigam": [
+        "sonu"
+    ],
+
+    "Rahat Fateh Ali Khan": [
+        "rahat"
+    ],
+
+    "Nusrat Fateh Ali Khan": [
+        "nusrat"
+    ]
+}
+
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -201,3 +288,36 @@ def get_artist_image(artist_name: str):
         return {
             "image_url": DEFAULT_IMAGE
         }
+    
+@app.get("/songs/category/{category}", response_model=list[SongResponse])
+def songs_by_category(
+    category: str,
+    db: Session = Depends(get_db)
+):
+
+    keywords = CATEGORY_RULES.get(category, [])
+
+    if not keywords:
+        return []
+
+    query = (
+        db.query(Song)
+        .join(Song.artists)
+    )
+
+    filters = []
+
+    for keyword in keywords:
+
+        filters.extend([
+            func.lower(Song.title).ilike(f"%{keyword.lower()}%"),
+            func.lower(Song.album).ilike(f"%{keyword.lower()}%"),
+            func.lower(Artist.name).ilike(f"%{keyword.lower()}%")
+        ])
+
+    return (
+        query
+        .filter(or_(*filters))
+        .distinct()
+        .all()
+    )
