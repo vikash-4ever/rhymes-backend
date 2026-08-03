@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from database import SessionLocal, engine
 from models import Base, Song, Artist
-from schemas import SongResponse
+from schemas import SongResponse, RecommendationRequest
+from recommendation_engine import recommend
 from typing import List
 import requests
 
@@ -166,6 +167,19 @@ def increment_play(song_id: str, db: Session = Depends(get_db)):
     db.refresh(song)
 
     return {"success": True, "play_count": song.play_count}
+
+@app.post("/recommendations", response_model=list[SongResponse])
+def get_recommendations(
+    request: RecommendationRequest,
+    db: Session = Depends(get_db),
+):
+    return recommend(
+        db=db,
+        liked_song_ids=request.likedSongIds,
+        recent_song_ids=request.recentSongIds,
+        liked_artists=request.likedArtists,
+        limit=request.limit,
+    )
 
 @app.get("/trending", response_model=list[SongResponse])
 def trending_songs(limit: int = 20, db: Session = Depends(get_db)):

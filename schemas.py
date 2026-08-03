@@ -26,3 +26,9 @@ class SongResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RecommendationRequest(BaseModel):
+    likedSongIds: List[str] = []
+    recentSongIds: List[str] = []
+    likedArtists: List[str] = []
+    limit: int = 20
