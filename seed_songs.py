@@ -3,10 +3,25 @@ from database import SessionLocal, engine
 from models import Base, Song, Artist
 from datetime import datetime
 import uuid
+import re
 
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
+
+def normalize_artist(name: str) -> str:
+    if not name:
+        return ""
+
+    name = name.strip()
+
+    # Remove YouTube Topic suffix
+    name = re.sub(r"\s*-\s*Topic$", "", name, flags=re.IGNORECASE)
+
+    # Collapse multiple spaces
+    name = re.sub(r"\s+", " ", name)
+
+    return name.strip()
 
 # Load JSON
 with open("final_songs.json", "r", encoding="utf-8") as f:
@@ -43,7 +58,10 @@ for item in songs_data:
     artist_names = item["artist"].split(",")
 
     for name in artist_names:
-        clean_name = name.strip()
+        clean_name = normalize_artist(name)
+
+        if not clean_name:
+            continue
 
         artist = db.query(Artist).filter_by(name=clean_name).first()
 
@@ -53,6 +71,7 @@ for item in songs_data:
                 name=clean_name
             )
             db.add(artist)
+
         song.artists.append(artist)
     db.flush()  # important so artist gets ID
 db.commit()
